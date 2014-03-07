@@ -14,6 +14,7 @@ import hashlib
 import imaplib
 import logging
 import argparse
+import email.utils
 
 
 class IMAP_Copy(object):
@@ -126,16 +127,18 @@ class IMAP_Copy(object):
                 status, data = self._conn_source.fetch(msg_num, '(RFC822 FLAGS)')
                 message = data[0][1]
                 flags = data[1][8:][:-2]  # Not perfect.. Waiting for bug reports
-
+                msg = email.message_from_string(data[0][1])
+                date_tuple=email.utils.parsedate(msg['Date'])
+                # print 'Date:',msg['Date'],'tuple:',date_tuple,'with tz',email.utils.parsedate_tz(msg['Date'])
                 self._conn_destination.append(
-                    destination_mailbox, flags, None, message
+                    destination_mailbox, flags, date_tuple, message
                 )
 
                 copy_count += 1
                 message_md5 = hashlib.md5(message).hexdigest()
 
-                self.logger.info("Copy mail %d of %d (copy_count=%d, md5(message)=%s)" % (
-                    progress_count, mail_count, copy_count, message_md5))
+                self.logger.info("Copy mail %d of %d (copy_count=%d, md5(message)=%s,date=%s)" % (
+                    progress_count, mail_count, copy_count, message_md5,msg['Date']))
 
                 if limit > 0 and copy_count >= limit:
                     self.logger.info("Copy limit %d reached (copy_count=%d)" % (
